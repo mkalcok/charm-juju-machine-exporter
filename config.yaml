@@ -5,10 +5,23 @@
 
 options:
   # An example config option to customise the log level of the workload
-  log-level:
-    description: |
-      Configures the log level of gunicorn. 
-
-      Acceptable values are: "info", "debug", "warning", "error" and "critical"
-    default: "info"
+  controller-url:
+    description: URL of juju controller
+    default: ""
     type: string
+  juju-user:
+    description: Juju username
+    default: ""
+    type: string
+  juju-password:
+    description: Password for juju user
+    default: ""
+    type: string
+  scrape-port:
+    description: Port to which prometheus exporter is bound.
+    default: 5000
+    type: int
+  scrape-interval:
+    description: How often should exporter update its data. (In minutes)
+    default: 15
+    type: int
