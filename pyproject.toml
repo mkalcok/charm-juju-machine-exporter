@@ -33,3 +33,16 @@ skip_glob = '''
     | report
 )/
 '''
+
+[tool.mypy]
+warn_unused_ignores = true
+warn_unused_configs = true
+warn_unreachable = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+## Ignore unsupported imports
+[[tool.mypy.overrides]]
+module = [
+  "charmhelpers.*"
+]
