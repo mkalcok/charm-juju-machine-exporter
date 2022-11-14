@@ -2,74 +2,45 @@
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
+from itertools import repeat
 
-import unittest
-
-import ops.testing
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.testing import Harness
-
-from charm import JujuMachineExporterCharm
+import pytest
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        # Enable more accurate simulation of container networking.
-        # For more information, see https://juju.is/docs/sdk/testing#heading--simulate-can-connect
-        ops.testing.SIMULATE_CAN_CONNECT = True
-        self.addCleanup(setattr, ops.testing, "SIMULATE_CAN_CONNECT", False)
+@pytest.mark.parametrize("event_name, handler", [
+    ("on.config_changed", "_on_config_changed"),
+    ("on.install", "_on_install"),
+    ("prometheus_target.on.prometheus_available", "_on_prometheus_available"),
+])
+def test_charm_event_mapping(event_name, handler, harness, mocker):
+    """Test that all events are bound to the expected event handlers."""
+    mocked_handler = mocker.patch.object(harness.charm, handler)
 
-        self.harness = Harness(JujuMachineExporterCharm)
-        self.addCleanup(self.harness.cleanup)
-        self.harness.begin()
+    event = harness.charm
+    for object_ in event_name.split("."):
+        event = event.__getattribute__(object_)
 
-    def test_httpbin_pebble_ready(self):
-        # Expected plan after Pebble ready with default config
-        expected_plan = {
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"GUNICORN_CMD_ARGS": "--log-level info"},
-                }
-            },
-        }
-        # Simulate the container coming up and emission of pebble-ready event
-        self.harness.container_pebble_ready("httpbin")
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        # Check we've got the plan we expected
-        self.assertEqual(expected_plan, updated_plan)
-        # Check the service was started
-        service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
-        self.assertTrue(service.is_running())
-        # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+    event.emit()
 
-    def test_config_changed_valid_can_connect(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        updated_env = updated_plan["services"]["httpbin"]["environment"]
-        # Check the config change was effective
-        self.assertEqual(updated_env, {"GUNICORN_CMD_ARGS": "--log-level debug"})
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+    mocked_handler.assert_called_once()
 
-    def test_config_changed_valid_cannot_connect(self):
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Check the charm is in WaitingStatus
-        self.assertIsInstance(self.harness.model.unit.status, WaitingStatus)
 
-    def test_config_changed_invalid(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "foobar"})
-        # Check the charm is in BlockedStatus
-        self.assertIsInstance(self.harness.model.unit.status, BlockedStatus)
+@pytest.mark.parametrize("resource_exists, resource_size, expect_path", [
+    (False, 0, False),  # In case resource was not attached, return None
+    (True, 0, False),  # In case the attached resource is empty file, return None
+    (True, 10, True),  # If resource is attached and has size, return local path
+])
+def test_snap_path_property(resource_exists, resource_size, expect_path, harness):
+    """Test that 'snap_path' property returns file path only when real resource is attached.
+
+    If resource is not attached or if it's an empty file, this property should return None.
+    """
+    snap_name = "exporter-snap"
+    if resource_exists:
+        # Generate some fake data for snap file if it's supposed to have some
+        snap_data = "".join(list(repeat("0", resource_size)))
+        harness.add_resource(snap_name, snap_data)
+
+    expected_path = str(harness.charm.model.resources.fetch(snap_name)) if expect_path else None
+
+    assert harness.charm.snap_path == expected_path
