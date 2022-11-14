@@ -25,3 +25,8 @@ options:
     description: How often should exporter update its data. (In minutes)
     default: 15
     type: int
+  scrape-timeout:
+    description: |
+      How long should Prometheus wait for response to scrape request before timing out (In seconds)
+    default: 30
+    type: int

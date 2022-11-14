@@ -30,3 +30,7 @@ resources:
       (Optional) Snap that implements actual data collection and export. If not provided, charm
       will try to download juju-machine-exporter from snap store.
     filename: juju-machine-exporter.snap
+
+provides:
+  prometheus-scrape:
+    interface: prometheus

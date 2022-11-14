@@ -21,6 +21,11 @@ from charmhelpers.fetch import snap
 from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, ModelError
+from prometheus_interface.operator import (
+    PrometheusConfigError,
+    PrometheusConnected,
+    PrometheusScrapeTarget,
+)
 
 from exporter import ExporterConfigError, ExporterSnap
 
@@ -31,7 +36,8 @@ logger = logging.getLogger(__name__)
 class JujuMachineExporterCharm(CharmBase):
     """Charm the service."""
 
-    CONFIG_MAP = {
+    # Mapping between charm and snap configuration options
+    SNAP_CONFIG_MAP = {
         "controller-url": "controller",
         "juju-user": "user",
         "juju-password": "password",
@@ -42,13 +48,16 @@ class JujuMachineExporterCharm(CharmBase):
     def __init__(self, *args: Any) -> None:
         """Initialize charm."""
         super().__init__(*args)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on.install, self._on_install)
-
         self.exporter = ExporterSnap()
-
+        self.prometheus_target = PrometheusScrapeTarget(self, "prometheus-scrape")
         self._snap_path: Optional[str] = None
         self._snap_path_set = False
+
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.install, self._on_install)
+        self.framework.observe(
+            self.prometheus_target.on.prometheus_available, self._on_prometheus_available
+        )
 
     @property
     def snap_path(self) -> Optional[str]:
@@ -74,7 +83,7 @@ class JujuMachineExporterCharm(CharmBase):
     def generate_exporter_config(self) -> Dict[str, Any]:
         """Generate exporter service config based on the values from charm config."""
         exporter_config = {}
-        for charm_option, snap_option in self.CONFIG_MAP.items():
+        for charm_option, snap_option in self.SNAP_CONFIG_MAP.items():
             value = self.config[charm_option]
             if not value:
                 continue
@@ -82,6 +91,36 @@ class JujuMachineExporterCharm(CharmBase):
             exporter_config[snap_option] = value
 
         return exporter_config
+
+    def reconfigure_scrape_target(self) -> None:
+        """Update scrape target configuration in related Prometheus application.
+
+        Note: this function has no effect if there's no application related via
+        'prometheus-scrape'.
+        """
+        port = self.config["scrape-port"]
+        interval_minutes = self.config["scrape-interval"]
+        interval = interval_minutes * 60
+        timeout = self.config["scrape-timeout"]
+        try:
+            self.prometheus_target.expose_scrape_target(
+                port, "/metrics", scrape_interval=f"{interval}s", scrape_timeout=f"{timeout}s"
+            )
+        except PrometheusConfigError as exc:
+            logger.error("Failed to configure prometheus scrape target: %s", exc)
+            raise exc
+
+    def reconfigure_open_ports(self) -> None:
+        """Update ports that juju shows as 'opened' in units' status."""
+        new_port = self.config["scrape-port"]
+
+        for port_spec in hookenv.opened_ports():
+            old_port, protocol = port_spec.split("/")
+            logger.debug("Setting port %s as closed.", old_port)
+            hookenv.close_port(old_port, protocol)
+
+        logger.debug("Setting port %s as opened.", new_port)
+        hookenv.open_port(new_port)
 
     def _on_install(self, _: InstallEvent) -> None:
         """Install juju-machine-exporter snap."""
@@ -104,8 +143,13 @@ class JujuMachineExporterCharm(CharmBase):
             self.unit.status = BlockedStatus("Invalid configuration. Please see logs.")
             return
 
-        hookenv.open_port(exporter_config["port"])
+        self.reconfigure_scrape_target()
+        self.reconfigure_open_ports()
         self.unit.status = ActiveStatus("Unit is ready")
+
+    def _on_prometheus_available(self, _: PrometheusConnected):
+        """Trigger configuration of a prometheus scrape target."""
+        self.reconfigure_scrape_target()
 
 
 if __name__ == "__main__":  # pragma: nocover
