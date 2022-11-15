@@ -147,7 +147,7 @@ class JujuMachineExporterCharm(CharmBase):
         self.reconfigure_open_ports()
         self.unit.status = ActiveStatus("Unit is ready")
 
-    def _on_prometheus_available(self, _: PrometheusConnected):
+    def _on_prometheus_available(self, _: PrometheusConnected) -> None:
         """Trigger configuration of a prometheus scrape target."""
         self.reconfigure_scrape_target()
 

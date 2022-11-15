@@ -71,7 +71,7 @@ class ExporterSnap:
         # Verify that 'port' is number within valid port range.
         try:
             port = int(config.get("port", ""))
-            if 1 > port > 655535:
+            if not 0 < port < 65535:
                 errors += f"Port {port} is not valid port number.{os.linesep}"
         except ValueError:
             errors += f"Configuration option 'port' must be a number.{os.linesep}"
@@ -80,7 +80,7 @@ class ExporterSnap:
         try:
             refresh = int(config.get("refresh", ""))
             if refresh < 1:
-                errors += f"Configuration option 'refresh' must be positive number.{os.linesep}"
+                errors += f"Configuration option 'refresh' must be a positive number.{os.linesep}"
         except ValueError:
             errors += f"Configuration option 'refresh' must be a number.{os.linesep}"
 
