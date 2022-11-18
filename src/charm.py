@@ -14,8 +14,10 @@ develop a new k8s charm using the Operator Framework:
 
 import logging
 import os
+import pathlib
 from typing import Any, Dict, Optional
 
+import yaml
 from charmhelpers.core import hookenv
 from charmhelpers.fetch import snap
 from ops.charm import CharmBase, ConfigChangedEvent, InstallEvent
@@ -38,11 +40,13 @@ class JujuMachineExporterCharm(CharmBase):
 
     # Mapping between charm and snap configuration options
     SNAP_CONFIG_MAP = {
-        "controller-url": "controller",
-        "juju-user": "user",
-        "juju-password": "password",
-        "scrape-interval": "refresh",
-        "scrape-port": "port",
+        "organization": "customer.name",
+        "controller-name": "juju.controller_name",
+        "controller-url": "juju.controller_endpoint",
+        "juju-user": "juju.username",
+        "juju-password": "juju.password",
+        "scrape-interval": "exporter.collect_interval",
+        "scrape-port": "exporter.port",
     }
 
     def __init__(self, *args: Any) -> None:
@@ -80,15 +84,44 @@ class JujuMachineExporterCharm(CharmBase):
 
         return self._snap_path
 
+    @staticmethod
+    def get_controller_ca() -> str:
+        """Fetch CA certificate used by controller."""
+        agent_conf_path = pathlib.Path(hookenv.charm_dir()).joinpath("../agent.conf")
+        with open(agent_conf_path, "r", encoding="utf-8") as conf_file:
+            agent_conf = yaml.safe_load(conf_file)
+
+        ca_cert = agent_conf.get("cacert")
+        if not ca_cert:
+            raise RuntimeError("Charm failed to fetch controllers' CA certificate.")
+
+        return ca_cert
+
     def generate_exporter_config(self) -> Dict[str, Any]:
         """Generate exporter service config based on the values from charm config."""
-        exporter_config = {}
+        exporter_config: Dict[str, Any] = {}
+        # transform charm config into snaps' configuration file
         for charm_option, snap_option in self.SNAP_CONFIG_MAP.items():
             value = self.config[charm_option]
             if not value:
                 continue
 
-            exporter_config[snap_option] = value
+            # Parse dot-separated snap config name and inject value to the final config
+            option_id = snap_option.split(".")
+            option_path = option_id[:-1]
+            option_name = option_id[-1]
+            slice_ = exporter_config
+            for identifier in option_path:
+                if identifier not in slice_:
+                    slice_[identifier] = {}
+                slice_ = slice_[identifier]
+            slice_[option_name] = value
+
+        # inject CA certificate that's automatically detected by charm
+        if "juju" not in exporter_config:
+            exporter_config["juju"] = {}
+
+        exporter_config["juju"]["controller_cacert"] = self.get_controller_ca()
 
         return exporter_config
 
@@ -139,7 +172,12 @@ class JujuMachineExporterCharm(CharmBase):
         try:
             self.exporter.apply_config(exporter_config)
         except ExporterConfigError as exc:
-            logger.error(str(exc))
+            # Replace snap config names with their charm equivalents
+            err_msg = str(exc)
+            for charm_option, snap_option in self.SNAP_CONFIG_MAP.items():
+                err_msg = err_msg.replace(snap_option, charm_option)
+
+            logger.error(err_msg)
             self.unit.status = BlockedStatus("Invalid configuration. Please see logs.")
             return
 

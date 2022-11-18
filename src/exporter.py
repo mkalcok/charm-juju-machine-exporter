@@ -9,7 +9,7 @@ Module focused on handling operations related to juju-machine-exporter snap.
 import logging
 import os
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import yaml
 from charmhelpers.fetch import snap
@@ -25,15 +25,23 @@ class ExporterConfigError(Exception):
 class ExporterSnap:
     """Class that handles operations of juju-machine-exporter snap and related services."""
 
-    # TODO: change snap name  # pylint: disable=fixme
-    SNAP_NAME = "test-exporter"
-    SNAP_CONFIG_PATH = f"/var/snap/{SNAP_NAME}/current/config/exporter.yaml"
+    SNAP_NAME = "juju-machine-exporter"
+    SNAP_CONFIG_PATH = f"/var/snap/{SNAP_NAME}/current/config.yaml"
     _SNAP_ACTIONS = [
         "stop",
         "start",
         "restart",
     ]
-    _REQUIRED_CONFIG = ["port", "controller", "user", "password", "refresh"]
+    _REQUIRED_CONFIG = [
+        "customer.name",
+        "juju.controller_endpoint",
+        "juju.controller_name",
+        "juju.controller_cacert",
+        "juju.username",
+        "juju.password",
+        "exporter.port",
+        "exporter.collect_interval",
+    ]
 
     def install(self, snap_path: Optional[str] = None) -> None:
         """Install juju-machine-exporter snap.
@@ -52,6 +60,48 @@ class ExporterSnap:
             logger.info("Installing %s snap from snap store.", self.SNAP_NAME)
             snap.snap_install(self.SNAP_NAME)
 
+    def _validate_required_options(self, config: Dict[str, Any]) -> List[str]:
+        """Validate that config has all required options for snap to run."""
+        missing_options = []
+        for option in self._REQUIRED_CONFIG:
+            config_value = config
+            for identifier in option.split("."):
+                config_value = config_value.get(identifier, {})
+            if not config_value:
+                missing_options.append(option)
+
+        return missing_options
+
+    @staticmethod
+    def _validate_option_values(config: Dict[str, Any]) -> str:
+        """Validate sane values for some of the config parameters where its feasible."""
+        errors = ""
+
+        # Verify that 'port' is number within valid port range.
+        try:
+            port = int(config.get("exporter", {}).get("port", ""))
+            if not 0 < port < 65535:
+                errors += f"Port {port} is not valid port number.{os.linesep}"
+        except ValueError:
+            errors += f"Configuration option 'port' must be a number.{os.linesep}"
+        except KeyError:
+            pass  # Options was not in the config
+
+        # Verify that 'collect_interval' is positive number.
+        try:
+            collect_interval = int(config.get("exporter", {}).get("collect_interval", ""))
+            if collect_interval < 1:
+                errors += (
+                    f"Configuration option 'collect_interval' must be a "
+                    f"positive number.{os.linesep}"
+                )
+        except ValueError:
+            errors += f"Configuration option 'collect_interval' must be a number.{os.linesep}"
+        except KeyError:
+            pass  # Options was not in the config
+
+        return errors
+
     def validate_config(self, config: Dict[str, Any]) -> None:
         """Validate supplied config file for exporter service.
 
@@ -62,27 +112,12 @@ class ExporterSnap:
         """
         errors = ""
 
-        # Verify that there are no missing options
-        missing_options = [option for option in self._REQUIRED_CONFIG if option not in config]
+        missing_options = self._validate_required_options(config)
         if missing_options:
             missing_str = ", ".join(missing_options)
             errors += f"Following config options are missing: {missing_str}{os.linesep}"
 
-        # Verify that 'port' is number within valid port range.
-        try:
-            port = int(config.get("port", ""))
-            if not 0 < port < 65535:
-                errors += f"Port {port} is not valid port number.{os.linesep}"
-        except ValueError:
-            errors += f"Configuration option 'port' must be a number.{os.linesep}"
-
-        # Verify that 'refresh' is positive number.
-        try:
-            refresh = int(config.get("refresh", ""))
-            if refresh < 1:
-                errors += f"Configuration option 'refresh' must be a positive number.{os.linesep}"
-        except ValueError:
-            errors += f"Configuration option 'refresh' must be a number.{os.linesep}"
+        errors += self._validate_option_values(config)
 
         if errors:
             raise ExporterConfigError(errors)

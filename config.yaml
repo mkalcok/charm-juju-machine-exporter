@@ -5,12 +5,24 @@
 
 options:
   # An example config option to customise the log level of the workload
+  organization:
+    description: |
+      Name of the organization that will be added as label to collected metrics. It's useful when
+      Prometheus collects metrics from multiple organizations/customers.
+    default: ""
+    type: string
+  controller-name:
+    description: |
+      Name of controller from which the data is being collected. This name will be added as label
+      to collected metrics. It's useful when Prometheus collects metrics from multiple controllers.
+    default: ""
+    type: string
   controller-url:
-    description: URL of juju controller
+    description: Endpoint of a juju controller in format <IP>:<PORT>
     default: ""
     type: string
   juju-user:
-    description: Juju username
+    description: Username that will be used to log into juju controller
     default: ""
     type: string
   juju-password:
@@ -22,7 +34,9 @@ options:
     default: 5000
     type: int
   scrape-interval:
-    description: How often should exporter update its data. (In minutes)
+    description: |
+      This option dictates how often exporter updates its data and how often should Prometheus
+      scrape them.(In minutes)
     default: 15
     type: int
   scrape-timeout:
