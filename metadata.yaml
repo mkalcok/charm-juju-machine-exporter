@@ -23,6 +23,8 @@ description: |
 
   TODO: include link to snap
 
+subordinate: True
+
 resources:
   exporter-snap:
     type: file
@@ -34,3 +36,8 @@ resources:
 provides:
   prometheus-scrape:
     interface: prometheus
+
+requires:
+  general-info:
+    interface: juju-info
+    scope: container
