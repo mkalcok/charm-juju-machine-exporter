@@ -34,8 +34,8 @@ class ExporterSnap:
     ]
     _REQUIRED_CONFIG = [
         "customer.name",
+        "customer.cloud_name",
         "juju.controller_endpoint",
-        "juju.controller_name",
         "juju.controller_cacert",
         "juju.username",
         "juju.password",

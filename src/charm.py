@@ -41,7 +41,7 @@ class JujuMachineExporterCharm(CharmBase):
     # Mapping between charm and snap configuration options
     SNAP_CONFIG_MAP = {
         "organization": "customer.name",
-        "controller-name": "juju.controller_name",
+        "cloud-name": "customer.cloud_name",
         "controller-url": "juju.controller_endpoint",
         "juju-user": "juju.username",
         "juju-password": "juju.password",

@@ -29,7 +29,7 @@ by the controller. In addition, each machine (metric) has labels that help to un
 
 * hostname - hostname of the machine as reported by Juju
 * juju_model - name of the model in which the machine is deployed
-* juju_controller - name of the controller that manages the model
+* cloud_name - name of the cloud that hosts the model
 * customer - name of the customer/organization that owns the controller
 * type - (Experimental) Distinguishes various host types
   * metal - Physical machine
@@ -40,10 +40,10 @@ Example data:
 ```
 # HELP juju_machine_state Running status of juju machines
 # TYPE juju_machine_state gauge
-juju_machine_state{customer="DOC",hostname="juju-882749-controller-0",job="juju-machine-exporter",juju_controller="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-882749-controller-3",job="juju-machine-exporter",juju_controller="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-ad368d-test-0",job="juju-machine-exporter",juju_controller="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-ad368d-test-1",job="juju-machine-exporter",juju_controller="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-882749-controller-0",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-882749-controller-3",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-ad368d-test-0",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-ad368d-test-1",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
 ```
 
 ## Charm configuration
@@ -63,7 +63,7 @@ user/password (usually found in `~/.local/share/juju/accounts.yaml`).
 Required options:
 
 * `organization`
-* `controller-name`
+* `cloud-name`
 * `controller-url`
 * `juju-user`
 * `juju-password`
@@ -111,7 +111,7 @@ crucial configuration options. Following is a sample configuration:
 ```
 juju config juju-machine-exporter \
   organization="Test Org" \
-  controller-name="Test Controller" \
+  cloud-name="Test Cloud" \
   controller-url="10.75.224.63:17070" \
   juju-user=admin \
   juju-password="86333204f5b22495550ab2c64a05607a"
@@ -142,11 +142,10 @@ ubuntu/0*                   active    idle   0        10.75.224.13
 $ curl http://10.75.224.13:5000/metrics
 # HELP juju_machine_state Running status of juju machines
 # TYPE juju_machine_state gauge
-juju_machine_state{customer="Test Org",hostname="juju-be56b1-0",job="juju-machine-exporter",juju_controller="Test Controller",juju_model="billing",type="metal"} 1.0
-juju_machine_state{customer="Test Org",hostname="juju-be56b1-1",job="juju-machine-exporter",juju_controller="Test Controller",juju_model="billing",type="metal"} 1.0
-juju_machine_state{customer="Test Org",hostname="juju-be56b1-2",job="juju-machine-exporter",juju_controller="Test Controller",juju_model="billing",type="metal"} 1.0
-juju_machine_state{customer="Test Org",hostname="juju-d53a52-0",job="juju-machine-exporter",juju_controller="Test Controller",juju_model="controller",type="metal"} 1.0
-
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-0",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-1",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-2",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-d53a52-0",job="juju-machine-exporter",juju_model="controller",type="metal"} 1.0
 ```
 ## Other resources
 

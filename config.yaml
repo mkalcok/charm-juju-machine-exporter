@@ -11,10 +11,10 @@ options:
       Prometheus collects metrics from multiple organizations/customers.
     default: ""
     type: string
-  controller-name:
+  cloud-name:
     description: |
-      Name of controller from which the data is being collected. This name will be added as label
-      to collected metrics. It's useful when Prometheus collects metrics from multiple controllers.
+      Arbitrary name for a cloud/deployment. This name will be added as label to collected
+      metrics. It's useful when Prometheus collects metrics from multiple controllers.
     default: ""
     type: string
   controller-url:
