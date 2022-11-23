@@ -3,9 +3,12 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 """Unit tests for JujuMachineExporterCharm."""
+import pathlib
 from itertools import repeat
+from unittest import mock
 
 import pytest
+import yaml
 
 import charm
 
@@ -55,17 +58,66 @@ def test_snap_path_property(resource_exists, resource_size, expect_path, harness
     assert harness.charm.snap_path == expected_path
 
 
-def test_generate_exporter_config_complete(harness):
+@pytest.mark.parametrize(
+    "agent_conf_data, expect_fail",
+    [
+        ({"cacert": "CA\nDATA"}, False),
+        ({}, True),
+    ],
+)
+def test_get_controller_ca(agent_conf_data, expect_fail, harness, mocker):
+    """Test parsing CA cert data out of agent.conf."""
+    charm_path = "/var/lib/juju/agents/unit-0/charm/"
+    agent_config_path = pathlib.Path(charm_path).joinpath("../agent.conf")
+    agent_conf_content = yaml.safe_dump(agent_conf_data, indent=2)
+    mocker.patch.object(charm.hookenv, "charm_dir", return_value=charm_path)
+
+    with mock.patch("builtins.open", mock.mock_open(read_data=agent_conf_content)) as open_mock:
+        if expect_fail:
+            with pytest.raises(RuntimeError):
+                harness.charm.get_controller_ca()
+        else:
+            expected_ca_cert = agent_conf_data["cacert"]
+            ca_cert = harness.charm.get_controller_ca()
+            assert ca_cert == expected_ca_cert
+
+    open_mock.assert_called_once_with(agent_config_path, "r", encoding="utf-8")
+
+
+def test_generate_exporter_config_complete(harness, mocker):
     """Test generating complete config file for exporter snap."""
     port = 5000
-    controller = "http://juju-controller:9000"
+    controller = "juju-controller:17070"
+    organization = "Test Org"
+    cloud = "Test cloud"
+    ca_cert = "--- CA CERT DATA ---"
     user = "foo"
     password = "bar"
     interval = 5
+    mocker.patch.object(charm.JujuMachineExporterCharm, "get_controller_ca", return_value=ca_cert)
+
+    expected_snap_config = {
+        "customer": {
+            "name": organization,
+            "cloud_name": cloud,
+        },
+        "exporter": {
+            "collect_interval": interval,
+            "port": port,
+        },
+        "juju": {
+            "controller_endpoint": controller,
+            "password": password,
+            "username": user,
+            "controller_cacert": ca_cert,
+        },
+    }
 
     with harness.hooks_disabled():
         harness.update_config(
             {
+                "organization": organization,
+                "cloud-name": cloud,
                 "controller-url": controller,
                 "juju-user": user,
                 "juju-password": password,
@@ -76,17 +128,14 @@ def test_generate_exporter_config_complete(harness):
 
     snap_config = harness.charm.generate_exporter_config()
 
-    assert snap_config["controller"] == controller
-    assert snap_config["user"] == user
-    assert snap_config["password"] == password
-    assert snap_config["refresh"] == interval
-    assert snap_config["port"] == port
+    assert snap_config == expected_snap_config
 
 
-def test_generate_exporter_config_incomplete(harness):
-    """Test that generated config won't contain keys for missing ocnfig options ."""
-    expected_missing_config = ["controller", "user", "password"]
-    expected_present_config = ["refresh", "port"]
+def test_generate_exporter_config_incomplete(harness, mocker):
+    """Test that generated config won't contain keys for missing config options."""
+    expected_missing_config = {"juju": ["controller", "user", "password"]}
+    expected_present_config = {"exporter": ["collect_interval", "port"]}
+    mocker.patch.object(charm.JujuMachineExporterCharm, "get_controller_ca", return_value="ca")
 
     with harness.hooks_disabled():
         harness.update_config(
@@ -101,11 +150,13 @@ def test_generate_exporter_config_incomplete(harness):
 
     snap_config = harness.charm.generate_exporter_config()
 
-    for missing_key in expected_missing_config:
-        assert missing_key not in snap_config
+    for section, missing_keys in expected_missing_config.items():
+        for key in missing_keys:
+            assert key not in snap_config[section]
 
-    for present_key in expected_present_config:
-        assert present_key in snap_config
+    for section, present_keys in expected_present_config.items():
+        for key in present_keys:
+            assert key in snap_config[section]
 
 
 @pytest.mark.parametrize("error", [True, False])

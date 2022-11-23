@@ -46,7 +46,7 @@ def test_validate_config_missing_fields():
 
 def test_validate_config_port_not_number():
     """Test config validation when port is not defined as number."""
-    config = {"port": "foo"}
+    config = {"exporter": {"port": "foo"}}
     expected_err = "Configuration option 'port' must be a number."
 
     validate_config_error(config, expected_err)
@@ -62,29 +62,35 @@ def test_validate_config_port_not_number():
 def test_validate_config_port_out_of_range(port):
     """Test config validation when port is defined out of allowed range."""
     expected_error = f"Port {port} is not valid port number."
-    validate_config_error({"port": port}, expected_error)
+    validate_config_error({"exporter": {"port": port}}, expected_error)
 
 
 def test_validate_configrefresh_not_number():
     """Test config validation when 'refresh' option is not a number."""
-    expected_err = "Configuration option 'refresh' must be a number."
-    validate_config_error({"refresh": "foo"}, expected_err)
+    expected_err = "Configuration option 'collect_interval' must be a number."
+    validate_config_error({"exporter": {"collect_interval": "foo"}}, expected_err)
 
 
 def test_validate_config_refresh_below_zero():
     """Test config validation when 'refresh' option is less than 1."""
-    expected_err = "Configuration option 'refresh' must be a positive number."
-    validate_config_error({"refresh": 0}, expected_err)
+    expected_err = "Configuration option 'collect_interval' must be a positive number."
+    validate_config_error({"exporter": {"collect_interval": 0}}, expected_err)
 
 
 def test_validate_config():
     """Test positively validating snap exporter config."""
     config = {
-        "port": 5000,
-        "controller": "10.0.0.99:9000",
-        "user": "foo",
-        "password": "bar",
-        "refresh": 5,
+        "customer": {"name": "Test Org", "cloud_name": "Test Cloud"},
+        "exporter": {
+            "port": 5000,
+            "collect_interval": 5,
+        },
+        "juju": {
+            "controller_endpoint": "10.0.0.99:17070",
+            "controller_cacert": "CA CERT DATA",
+            "username": "foo",
+            "password": "bar",
+        },
     }
 
     exporter_ = exporter.ExporterSnap()

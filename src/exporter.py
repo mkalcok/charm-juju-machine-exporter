@@ -79,7 +79,7 @@ class ExporterSnap:
 
         # Verify that 'port' is number within valid port range.
         try:
-            port = int(config.get("exporter", {}).get("port", ""))
+            port = int(config["exporter"]["port"])
             if not 0 < port < 65535:
                 errors += f"Port {port} is not valid port number.{os.linesep}"
         except ValueError:
@@ -89,7 +89,7 @@ class ExporterSnap:
 
         # Verify that 'collect_interval' is positive number.
         try:
-            collect_interval = int(config.get("exporter", {}).get("collect_interval", ""))
+            collect_interval = int(config["exporter"]["collect_interval"])
             if collect_interval < 1:
                 errors += (
                     f"Configuration option 'collect_interval' must be a "
