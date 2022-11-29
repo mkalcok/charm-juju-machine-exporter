@@ -4,6 +4,7 @@
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 """Unit tests for JujuMachineExporterCharm."""
 import pathlib
+from base64 import b64decode
 from itertools import repeat
 from unittest import mock
 
@@ -65,7 +66,7 @@ def test_snap_path_property(resource_exists, resource_size, expect_path, harness
         ({}, True),
     ],
 )
-def test_get_controller_ca(agent_conf_data, expect_fail, harness, mocker):
+def test_get_controller_ca_from_file(agent_conf_data, expect_fail, harness, mocker):
     """Test parsing CA cert data out of agent.conf."""
     charm_path = "/var/lib/juju/agents/unit-0/charm/"
     agent_config_path = pathlib.Path(charm_path).joinpath("../agent.conf")
@@ -82,6 +83,26 @@ def test_get_controller_ca(agent_conf_data, expect_fail, harness, mocker):
             assert ca_cert == expected_ca_cert
 
     open_mock.assert_called_once_with(agent_config_path, "r", encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    "ca_data, expect_fail",
+    [
+        ("this_is-not valid b64", True),
+        ("VGhpcyBpcyB2YWxpZCBDQQ==", False),
+    ],
+)
+def test_get_controller_ca_from_config(ca_data, expect_fail, harness):
+    """Test parsing CA certificate from config option."""
+    with harness.hooks_disabled():
+        harness.update_config({"controller-ca": ca_data})
+
+    if expect_fail:
+        with pytest.raises(RuntimeError):
+            harness.charm.get_controller_ca()
+    else:
+        expected_data = b64decode(ca_data).decode(encoding="ascii")
+        assert expected_data == harness.charm.get_controller_ca()
 
 
 def test_generate_exporter_config_complete(harness, mocker):

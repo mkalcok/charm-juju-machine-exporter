@@ -15,6 +15,8 @@ develop a new k8s charm using the Operator Framework:
 import logging
 import os
 import pathlib
+from base64 import b64decode
+from binascii import Error as Base64Error
 from typing import Any, Dict, Optional
 
 import yaml
@@ -84,16 +86,32 @@ class JujuMachineExporterCharm(CharmBase):
 
         return self._snap_path
 
-    @staticmethod
-    def get_controller_ca() -> str:
-        """Fetch CA certificate used by controller."""
+    def get_controller_ca(self) -> str:
+        """Get CA certificate used by targeted Juju controller.
+
+        CA certificate can be directly configured by `controller-ca` option, if it is, the value is
+        directly returned by this method. If it is not defined, a CA cert used by the controller
+        that deploys this unit will be returned.
+        """
+        explicit_cert = self.config.get("controller-ca", "")
+        if explicit_cert:
+            try:
+                return b64decode(explicit_cert, validate=True).decode(encoding="ascii")
+            except Base64Error as exc:
+                logger.error(
+                    "Config option 'controller-ca' does not contain valid base64-encoded data."
+                    " Bad data: %s",
+                    explicit_cert,
+                )
+                raise RuntimeError("Invalid base64 value in 'controller-ca' option.") from exc
+
         agent_conf_path = pathlib.Path(hookenv.charm_dir()).joinpath("../agent.conf")
         with open(agent_conf_path, "r", encoding="utf-8") as conf_file:
             agent_conf = yaml.safe_load(conf_file)
 
         ca_cert = agent_conf.get("cacert")
         if not ca_cert:
-            raise RuntimeError("Charm failed to fetch controllers' CA certificate.")
+            raise RuntimeError("Charm failed to fetch controller's CA certificate.")
 
         return ca_cert
 
