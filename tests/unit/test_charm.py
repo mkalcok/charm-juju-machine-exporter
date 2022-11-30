@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
-"""Unit tests for JujuMachineExporterCharm."""
+"""Unit tests for PrometheusJujuExporterCharm."""
 import pathlib
 from base64 import b64decode
 from itertools import repeat
@@ -115,7 +115,7 @@ def test_generate_exporter_config_complete(harness, mocker):
     user = "foo"
     password = "bar"
     interval = 5
-    mocker.patch.object(charm.JujuMachineExporterCharm, "get_controller_ca", return_value=ca_cert)
+    mocker.patch.object(harness.charm, "get_controller_ca", return_value=ca_cert)
 
     expected_snap_config = {
         "customer": {
@@ -156,7 +156,7 @@ def test_generate_exporter_config_incomplete(harness, mocker):
     """Test that generated config won't contain keys for missing config options."""
     expected_missing_config = {"juju": ["controller", "user", "password"]}
     expected_present_config = {"exporter": ["collect_interval", "port"]}
-    mocker.patch.object(charm.JujuMachineExporterCharm, "get_controller_ca", return_value="ca")
+    mocker.patch.object(harness.charm, "get_controller_ca", return_value="ca")
 
     with harness.hooks_disabled():
         harness.update_config(

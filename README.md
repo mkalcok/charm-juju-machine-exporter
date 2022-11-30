@@ -8,13 +8,13 @@ Avoid using this README file for information that is maintained or published els
 Use links instead.
 -->
 
-# juju-machine-exporter
+# prometheus-juju-exporter
 
 This charm collects statistics about machines deployed by juju controller and exports them as a
 Prometheus metrics.
 
 Core collecting and exporting functionality is implemented in the
-[juju-machine-exporter snap](https://github.com/agileshaw/juju-machine-exporter). This snap can be
+[prometheus-juju-exporter snap](https://github.com/agileshaw/juju-machine-exporter). This snap can be
 either provided manually during the deployment as a resource or this charm will attempt to
 download it from [Snap Store](https://snapcraft.io/store).
 
@@ -40,10 +40,10 @@ Example data:
 ```
 # HELP juju_machine_state Running status of juju machines
 # TYPE juju_machine_state gauge
-juju_machine_state{customer="DOC",hostname="juju-882749-controller-0",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-882749-controller-3",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-ad368d-test-0",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
-juju_machine_state{customer="DOC",hostname="juju-ad368d-test-1",job="juju-machine-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-882749-controller-0",job="prometheus-juju-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-882749-controller-3",job="prometheus-juju-exporter",cloud_name="openstack-cloud-serverstack",juju_model="controller",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-ad368d-test-0",job="prometheus-juju-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
+juju_machine_state{customer="DOC",hostname="juju-ad368d-test-1",job="prometheus-juju-exporter",cloud_name="openstack-cloud-serverstack",juju_model="test",type="kvm"} 1.0
 ```
 
 ## Charm configuration
@@ -68,7 +68,7 @@ Required options:
 * `juju-user`
 * `juju-password`
 
-(Use `juju config juju-machine-exporter` to get more information about each option.)
+(Use `juju config prometheus-juju-exporter` to get more information about each option.)
 
 ## Manual Deployment
 
@@ -76,8 +76,9 @@ This is currently (#TODO) the only way to deploy this charm as neither the charm
 the exporter are published in their respective stores.
 
 ### Step 0 - Clone and build the snap
-Clone [juju-machine-exporter snap](https://github.com/agileshaw/juju-machine-exporter) and build
+Clone [prometheus-juju-exporter snap](https://github.com/agileshaw/juju-machine-exporter) and build
 the snap using `snapcraft`
+(TODO: update link to canonical repo after migration)
 ```bash
 git clone https://github.com/agileshaw/juju-machine-exporter.git
 cd juju-machine-exporter/
@@ -85,6 +86,7 @@ make build
 ```
 ### Step 1 - Clone and build the charm 
 Clone this repository (if you haven't already) and run `make build`.
+(TODO: update link to canonical repo after migration)
 ```bash
 git clone https://github.com/mkalcok/charm-juju-machine-exporter.git
 cd charm-juju-machine-exporter/
@@ -92,24 +94,24 @@ make build
 ```
 ### Step 2 - Deploy charm with snap as a resource
 This is a subordinate charm, so we'll need additional principal charm for its deployment. We can
-use the `ubuntu` charm for this. We'll also deploy `Prometheus` so we can work with collected data. 
+use the `ubuntu` charm for this. We'll also deploy `Prometheus` so we can work with collected data.
 
 ```bash
-juju deploy ./juju-machine-exporter.charm --resource exporter-snap=<PATH_TO_EXPORTER_SNAP>
+juju deploy ./prometheus-juju-exporter.charm --resource exporter-snap=<PATH_TO_EXPORTER_SNAP>
 juju deploy ubuntu
 juju deploy prometheus2
-juju relate juju-machine-exporter ubuntu
-juju relate prometheus2:scrape juju-machine-exporter
+juju relate prometheus-juju-exporter ubuntu
+juju relate prometheus2:scrape prometheus-juju-exporter
 # (Optional) You can throw in Grafana into the mix
 juju deploy grafana
 juju relate grafana:grafana-source prometheus2
 ```
 
 ### Step 3 - Configuration
-At this point the unit of `juju-machine-exporter` should be in `Blocked` state as it's missing
+At this point the unit of `prometheus-juju-exporter` should be in `Blocked` state as it's missing
 crucial configuration options. Following is a sample configuration:
 ```
-juju config juju-machine-exporter \
+juju config prometheus-juju-exporter \
   organization="Test Org" \
   cloud-name="Test Cloud" \
   controller-url="10.75.224.63:17070" \
@@ -125,27 +127,27 @@ $ juju status
 Model    Controller  Cloud/Region         Version  SLA          Timestamp
 billing  local-lxd   localhost/localhost  2.9.33   unsupported  16:44:57+01:00
 
-App                    Version  Status  Scale  Charm                  Channel  Rev  Exposed  Message
-grafana                         active      1  grafana                stable    59  no       Ready
-juju-machine-exporter           active      1  juju-machine-exporter             0  no       Unit is ready
-prometheus2                     active      1  prometheus2            stable    33  no       Ready
-ubuntu                 20.04    active      1  ubuntu                 stable    21  no       
+App                       Version  Status  Scale  Charm                     Channel  Rev  Exposed  Message
+grafana                            active      1  grafana                   stable    59  no       Ready
+prometheus-juju-exporter           active      1  prometheus-juju-exporter             0  no       Unit is ready
+prometheus2                        active      1  prometheus2               stable    33  no       Ready
+ubuntu                    20.04    active      1  ubuntu                    stable    21  no       
 
-Unit                        Workload  Agent  Machine  Public address  Ports               Message
-grafana/0*                  active    idle   2        10.75.224.197   3000/tcp            Ready
-prometheus2/0*              active    idle   1        10.75.224.118   9090/tcp,12321/tcp  Ready
-ubuntu/0*                   active    idle   0        10.75.224.13                        
-  juju-machine-exporter/0*  active    idle            10.75.224.13    5000/tcp            Unit is ready
+Unit                           Workload  Agent  Machine  Public address  Ports               Message
+grafana/0*                     active    idle   2        10.75.224.197   3000/tcp            Ready
+prometheus2/0*                 active    idle   1        10.75.224.118   9090/tcp,12321/tcp  Ready
+ubuntu/0*                      active    idle   0        10.75.224.13                        
+  prometheus-juju-exporter/0*  active    idle            10.75.224.13    5000/tcp            Unit is ready
 
 ```
 ```
 $ curl http://10.75.224.13:5000/metrics
 # HELP juju_machine_state Running status of juju machines
 # TYPE juju_machine_state gauge
-juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-0",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
-juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-1",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
-juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-2",job="juju-machine-exporter",juju_model="billing",type="metal"} 1.0
-juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-d53a52-0",job="juju-machine-exporter",juju_model="controller",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-0",job="prometheus-juju-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-1",job="prometheus-juju-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-be56b1-2",job="prometheus-juju-exporter",juju_model="billing",type="metal"} 1.0
+juju_machine_state{cloud_name="Test Cloud",customer="Test Org",hostname="juju-d53a52-0",job="prometheus-juju-exporter",juju_model="controller",type="metal"} 1.0
 ```
 ## Other resources
 

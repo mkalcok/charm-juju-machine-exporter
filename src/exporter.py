@@ -4,7 +4,7 @@
 
 """Exporter snap helper.
 
-Module focused on handling operations related to juju-machine-exporter snap.
+Module focused on handling operations related to prometheus-juju-exporter snap.
 """
 import logging
 import os
@@ -23,9 +23,9 @@ class ExporterConfigError(Exception):
 
 
 class ExporterSnap:
-    """Class that handles operations of juju-machine-exporter snap and related services."""
+    """Class that handles operations of prometheus-juju-exporter snap and related services."""
 
-    SNAP_NAME = "juju-machine-exporter"
+    SNAP_NAME = "prometheus-juju-exporter"
     SNAP_CONFIG_PATH = f"/var/snap/{SNAP_NAME}/current/config.yaml"
     _SNAP_ACTIONS = [
         "stop",
@@ -44,7 +44,7 @@ class ExporterSnap:
     ]
 
     def install(self, snap_path: Optional[str] = None) -> None:
-        """Install juju-machine-exporter snap.
+        """Install prometheus-juju-exporter snap.
 
         This method tries to install snap from local file if parameter :snap_path is provided.
         Otherwise, it'll attempt installation from snap store based on ExporterSnap.SNAP_NAME.

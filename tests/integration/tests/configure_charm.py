@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Martin Kalcok
 # See LICENSE file for licensing details.
-"""Pre-test configuration of a juju-machine-exporter testing model."""
+"""Pre-test configuration of a prometheus-juju-exporter testing model."""
 
 import logging
 from base64 import b64encode
@@ -20,7 +20,7 @@ CONTROLLER_FILE = JUJU_LOCAL_DATA.joinpath("controllers.yaml")
 
 
 def setup_juju_credentials() -> None:
-    """Configure juju-machine-exporter with required juju credentials."""
+    """Configure prometheus-juju-exporter with required juju credentials."""
     controller_units = model.get_units("juju-local")
     if len(controller_units) < 1:
         err = "Failed to find 'juju-local' units."
@@ -54,7 +54,7 @@ def setup_juju_credentials() -> None:
 
     # configure juju exporter
     model.set_application_config(
-        "juju-machine-exporter",
+        "prometheus-juju-exporter",
         {
             "organization": "Test org",
             "cloud-name": "Test Cloud",

@@ -37,7 +37,7 @@ from exporter import ExporterConfigError, ExporterSnap
 logger = logging.getLogger(__name__)
 
 
-class JujuMachineExporterCharm(CharmBase):
+class PrometheusJujuExporterCharm(CharmBase):
     """Charm the service."""
 
     # Mapping between charm and snap configuration options
@@ -174,7 +174,7 @@ class JujuMachineExporterCharm(CharmBase):
         hookenv.open_port(new_port)
 
     def _on_install(self, _: InstallEvent) -> None:
-        """Install juju-machine-exporter snap."""
+        """Install prometheus-juju-exporter snap."""
         self.unit.status = MaintenanceStatus("Installing charm software.")
         try:
             self.exporter.install(self.snap_path)
@@ -209,4 +209,4 @@ class JujuMachineExporterCharm(CharmBase):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    main(JujuMachineExporterCharm)
+    main(PrometheusJujuExporterCharm)

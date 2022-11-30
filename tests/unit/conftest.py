@@ -7,7 +7,7 @@
 import ops.testing
 import pytest
 
-from charm import JujuMachineExporterCharm, PrometheusScrapeTarget
+from charm import PrometheusJujuExporterCharm, PrometheusScrapeTarget
 
 
 @pytest.fixture(scope="session")
@@ -17,12 +17,12 @@ def unit_hostname() -> str:
 
 
 @pytest.fixture()
-def harness(unit_hostname, mocker) -> ops.testing.Harness[JujuMachineExporterCharm]:
-    """Return harness for JujuMachineExporterCharm."""
+def harness(unit_hostname, mocker) -> ops.testing.Harness[PrometheusJujuExporterCharm]:
+    """Return harness for PrometheusJujuExporterCharm."""
     ops.testing.SIMULATE_CAN_CONNECT = True
     mocker.patch.object(PrometheusScrapeTarget, "get_hostname", return_value=unit_hostname)
 
-    harness = ops.testing.Harness(JujuMachineExporterCharm)
+    harness = ops.testing.Harness(PrometheusJujuExporterCharm)
     harness.begin()
     yield harness
 
