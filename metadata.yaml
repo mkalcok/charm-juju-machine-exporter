@@ -3,11 +3,11 @@
 
 # The charm package name, no spaces (required)
 # See https://juju.is/docs/sdk/naming#heading--naming-charms for guidance.
-name: juju-machine-exporter
+name: prometheus-juju-exporter
  
 # The following metadata are human-readable and will be published prominently on Charmhub.
 
-display-name: Juju machine exporter
+display-name: Prometheus Juju Exporter
 
 summary: Charm that exports statistics about number of juju-deployed machines
 
@@ -19,7 +19,7 @@ description: |
   The metrics provide information about machines' states (UP or DOWN) and can be used
   to calculate how many machines are managed by juju controller and in which state they
   are. For more detailed information about exposed metrics and their format see
-  juju-machine-exporter snap documentation
+  prometheus-juju-exporter snap documentation
 
   TODO: include link to snap
 
@@ -30,8 +30,8 @@ resources:
     type: file
     description: |
       (Optional) Snap that implements actual data collection and export. If not provided, charm
-      will try to download juju-machine-exporter from snap store.
-    filename: juju-machine-exporter.snap
+      will try to download prometheus-juju-exporter from snap store.
+    filename: prometheus-juju-exporter.snap
 
 provides:
   prometheus-scrape:

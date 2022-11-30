@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Martin Kalcok
 # See LICENSE file for licensing details.
-"""Functional tests for juju-machine-exporter."""
+"""Functional tests for prometheus-juju-exporter."""
 
 import logging
 import os
@@ -29,10 +29,10 @@ def wait_for_model_settle() -> None:
     model.wait_for_application_states(states=expected_app_states)
 
 
-class BasicJujuMachineExporterTests(unittest.TestCase):
-    """Basic functional tests for juju-machine-exporter charm."""
+class BasicPrometheusJujuExporterTests(unittest.TestCase):
+    """Basic functional tests for prometheus-juju-exporter charm."""
 
-    NAME = "juju-machine-exporter"
+    NAME = "prometheus-juju-exporter"
     CONTROLLER_APP = "juju-local"  # name of the application that deploys nested Juju controller.
 
     def setUp(self) -> None:

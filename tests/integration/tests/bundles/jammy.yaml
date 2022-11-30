@@ -9,8 +9,8 @@ applications:
     charm: bootstack-charmers-juju-local
     num_units: 0
 
-  juju-machine-exporter:
-    charm: ../../../../juju-machine-exporter.charm
+  prometheus-juju-exporter:
+    charm: ../../../../prometheus-juju-exporter.charm
     num_units: 0
     resources:
       exporter-snap: ../../../../exporter.snap
@@ -21,8 +21,8 @@ applications:
 
 relations:
   - - "ubuntu"
-    - "juju-machine-exporter"
+    - "prometheus-juju-exporter"
   - - "ubuntu"
     - "juju-local"
-  - - "juju-machine-exporter"
+  - - "prometheus-juju-exporter"
     - "prometheus"
